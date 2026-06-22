@@ -1,0 +1,9 @@
+
+# Secrets
+newsdraftbot/token.json
+newsdraftbot/credentials.json
+newsdraftbot/.env
+*.pyc
+__pycache__/
+newsdraftbot/static/uploads/*.jpg
+*.db

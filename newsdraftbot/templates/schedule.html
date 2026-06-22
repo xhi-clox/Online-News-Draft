@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduled Articles - NewsDraftBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-newspaper"></i> NewsDraftBot
+            </a>
+            <div class="collapse navbar-collapse show">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/articles"><i class="bi bi-list-ul"></i> Articles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/articles?status=SCHEDULED"><i class="bi bi-calendar"></i> Schedule</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings"><i class="bi bi-gear"></i> Settings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <h1 class="h3 mb-4"><i class="bi bi-calendar"></i> Scheduled Publications</h1>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Scheduled Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for article in articles %}
+                            <tr>
+                                <td>
+                                    <a href="/articles/{{ article.id }}">{{ article.title[:80] }}</a>
+                                </td>
+                                <td>{{ article.scheduled_time | dt('%Y-%m-%d %H:%M:%S') if article.scheduled_time else 'N/A' }}</td>
+                                <td><span class="badge bg-secondary">{{ article.status }}</span></td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="cancelSchedule({{ article.id }})">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    <i class="bi bi-calendar" style="font-size: 2rem;"></i>
+                                    <p class="mt-2">No scheduled articles</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function cancelSchedule(id) {
+            if (!confirm('Cancel scheduled publication?')) return;
+            const resp = await fetch(`/articles/${id}/cancel-schedule`, { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) location.reload();
+        }
+    </script>
+</body>
+</html>

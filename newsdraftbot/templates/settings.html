@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - NewsDraftBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-newspaper"></i> NewsDraftBot
+            </a>
+            <div class="collapse navbar-collapse show">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/articles"><i class="bi bi-list-ul"></i> Articles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/settings"><i class="bi bi-gear"></i> Settings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <h1 class="h3 mb-4"><i class="bi bi-gear"></i> Settings</h1>
+
+        <div class="row">
+            <div class="col-lg-6">
+                    <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-image"></i> Watermark Settings</div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Configure the position and size of your logo watermark on featured images.
+                            Place your logo PNG file at <code>static/logos/logo.png</code>.
+                            <strong>Custom</strong> mode uses fixed absolute pixel values — the logo
+                            stays the exact same size and position on every image, regardless of image dimensions.
+                        </p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Logo Position Mode</label>
+                            <select class="form-select" id="logoPosition">
+                                <option value="custom" {% if config.WATERMARK_POSITION == 'custom' %}selected{% endif %}>Custom (absolute pixels)</option>
+                                <option value="top_left" {% if config.WATERMARK_POSITION == 'top_left' %}selected{% endif %}>Top Left</option>
+                                <option value="top_right" {% if config.WATERMARK_POSITION == 'top_right' %}selected{% endif %}>Top Right</option>
+                                <option value="bottom_left" {% if config.WATERMARK_POSITION == 'bottom_left' %}selected{% endif %}>Bottom Left</option>
+                                <option value="bottom_right" {% if config.WATERMARK_POSITION == 'bottom_right' %}selected{% endif %}>Bottom Right</option>
+                                <option value="center" {% if config.WATERMARK_POSITION == 'center' %}selected{% endif %}>Center</option>
+                            </select>
+                        </div>
+
+                        <div id="customLogoOptions">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Logo Width (px)</label>
+                                    <input type="number" class="form-control" id="logoWidth" value="{{ config.LOGO_WIDTH }}" min="1">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Logo Height (px)</label>
+                                    <input type="number" class="form-control" id="logoHeight" value="{{ config.LOGO_HEIGHT }}" min="1">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-4">
+                                    <label class="form-label">X Position (px)</label>
+                                    <input type="number" class="form-control" id="logoX" value="{{ config.LOGO_X }}" min="0">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">Y Position (px)</label>
+                                    <input type="number" class="form-control" id="logoY" value="{{ config.LOGO_Y }}" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="updateLogoPosition()">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+
+                        <div class="mt-4 pt-3 border-top">
+                            <label class="form-label d-block fw-semibold mb-2">Featured Image Utility</label>
+                            <p class="text-muted small mb-3">
+                                Download <code>static/logos/1.jpg</code> with your current watermark settings applied.
+                            </p>
+                            <a href="/settings/download-featured" class="btn btn-success">
+                                <i class="bi bi-download"></i> Download Watermarked 1.jpg
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-eye"></i> Preview</div>
+                    <div class="card-body text-center">
+                        <p class="text-muted small mb-2">Shows where the logo will appear on a 700×390 image</p>
+                        <div id="previewContainer" style="position:relative; width:350px; height:195px; background:repeating-conic-gradient(#e8e8e8 0% 25%,#fff 0% 50%) 0 0 / 20px 20px; border:2px dashed #aaa; border-radius:4px; margin:0 auto; overflow:hidden;">
+                            <div id="previewLogo" style="position:absolute; background:rgba(13,110,253,0.55); border:1px solid #0d6efd; display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:600; color:#fff; letter-spacing:1px;">LOGO</div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted" id="previewCoords"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-info-circle"></i> Configuration</div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">WordPress URL</label>
+                                <input type="text" class="form-control" name="WORDPRESS_URL" value="{{ config.WORDPRESS_URL }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">WordPress Username</label>
+                                <input type="text" class="form-control" name="WORDPRESS_USERNAME" value="{{ config.WORDPRESS_USERNAME }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">WordPress App Password</label>
+                                <input type="password" class="form-control" name="WORDPRESS_APP_PASSWORD" value="{{ config.WORDPRESS_APP_PASSWORD }}">
+                                <small class="text-muted">Generate this in Users -> Profile in WordPress</small>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">News Source URL</label>
+                                <input type="text" class="form-control" name="NEWS_SOURCE_URL" value="{{ config.NEWS_SOURCE_URL }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Custom Reporter Name</label>
+                                <input type="text" class="form-control" name="REPORTER_NAME" value="{{ config.REPORTER_NAME }}">
+                                <small class="text-muted">Default byline name for articles when no reporter is specified</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Check Interval (minutes)</label>
+                                <input type="number" class="form-control" name="CHECK_INTERVAL_MINUTES" value="{{ config.CHECK_INTERVAL_MINUTES }}">
+                            </div>
+                            <hr>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoShareSwitch" name="AUTO_SHARE_TO_FACEBOOK" {% if config.AUTO_SHARE_TO_FACEBOOK %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="autoShareSwitch">Auto-Share to Facebook</label>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Facebook Page ID</label>
+                                <input type="text" class="form-control" name="FB_PAGE_ID" value="{{ config.FB_PAGE_ID }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Facebook Page Access Token</label>
+                                <input type="password" class="form-control" name="FB_PAGE_ACCESS_TOKEN" value="{{ config.FB_PAGE_ACCESS_TOKEN }}">
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary w-100" onclick="saveConfig()">
+                                <i class="bi bi-save"></i> Save All Configurations
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="notificationToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-info-circle me-2" id="toastIcon"></i>
+                <strong class="me-auto" id="toastTitle">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
+
+        function showNotification(message, type) {
+            const el = document.getElementById('notificationToast');
+            const icon = document.getElementById('toastIcon');
+            const title = document.getElementById('toastTitle');
+            el.className = 'toast';
+            if (type === 'success') {
+                el.classList.add('bg-success', 'text-white');
+                icon.className = 'bi bi-check-circle me-2';
+                title.textContent = 'Success';
+            } else if (type === 'error') {
+                el.classList.add('bg-danger', 'text-white');
+                icon.className = 'bi bi-exclamation-circle me-2';
+                title.textContent = 'Error';
+            } else {
+                icon.className = 'bi bi-info-circle me-2';
+                title.textContent = 'Info';
+            }
+            document.getElementById('toastMessage').textContent = message;
+            toast.show();
+        }
+
+        const PREVIEW_W = 350, PREVIEW_H = 195;
+
+        function calcLogoPos() {
+            const mode = document.getElementById('logoPosition').value;
+            if (mode === 'custom') {
+                const logoW = parseInt(document.getElementById('logoWidth').value) || 300;
+                const logoH = parseInt(document.getElementById('logoHeight').value) || 52;
+                const logoX = parseInt(document.getElementById('logoX').value) || 70;
+                const logoY = parseInt(document.getElementById('logoY').value) || 450;
+                return { x: logoX * PREVIEW_W / 700, y: logoY * PREVIEW_H / 390, w: logoW * PREVIEW_W / 700, h: logoH * PREVIEW_H / 390 };
+            }
+            const logoW = PREVIEW_W * 0.2;
+            const logoH = logoW * (52 / 300);
+            const margin = PREVIEW_W * 0.05;
+            switch (mode) {
+                case 'top_left': return { x: margin, y: margin, w: logoW, h: logoH };
+                case 'top_right': return { x: PREVIEW_W - logoW - margin, y: margin, w: logoW, h: logoH };
+                case 'bottom_left': return { x: margin, y: PREVIEW_H - logoH - margin, w: logoW, h: logoH };
+                case 'bottom_right': return { x: PREVIEW_W - logoW - margin, y: PREVIEW_H - logoH - margin, w: logoW, h: logoH };
+                case 'center': return { x: PREVIEW_W * 0.35, y: PREVIEW_H * 0.40, w: logoW, h: logoH };
+                default: return { x: 0, y: 0, w: 50, h: 20 };
+            }
+        }
+
+        function updatePreview() {
+            const pos = calcLogoPos();
+            const el = document.getElementById('previewLogo');
+            el.style.left = Math.round(pos.x) + 'px';
+            el.style.top = Math.round(pos.y) + 'px';
+            el.style.width = Math.round(pos.w) + 'px';
+            el.style.height = Math.round(pos.h) + 'px';
+            document.getElementById('previewCoords').textContent =
+                `Logo: ${Math.round(pos.w)}×${Math.round(pos.h)} px at (${Math.round(pos.x)}, ${Math.round(pos.y)}) on preview`;
+        }
+
+        function toggleCustomOptions() {
+            const mode = document.getElementById('logoPosition').value;
+            document.getElementById('customLogoOptions').style.display = mode === 'custom' ? 'block' : 'none';
+            updatePreview();
+        }
+
+        document.getElementById('logoPosition').addEventListener('change', toggleCustomOptions);
+        document.querySelectorAll('#customLogoOptions input').forEach(el => el.addEventListener('input', updatePreview));
+        toggleCustomOptions();
+
+        async function updateLogoPosition() {
+            const data = {
+                position: document.getElementById('logoPosition').value,
+                logo_width: document.getElementById('logoWidth').value,
+                logo_height: document.getElementById('logoHeight').value,
+                logo_x: document.getElementById('logoX').value,
+                logo_y: document.getElementById('logoY').value
+            };
+            try {
+                const resp = await fetch('/settings/update-logo-position', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (err) {
+                showNotification('Network error', 'error');
+            }
+        }
+
+        async function saveConfig() {
+            const form = document.getElementById('configForm');
+            const formData = new FormData(form);
+            const data = {};
+            
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            // Handle checkboxes manually as FormData skips unchecked ones
+            data['AUTO_SHARE_TO_FACEBOOK'] = document.getElementById('autoShareSwitch').checked ? 'true' : 'false';
+
+            try {
+                const resp = await fetch('/settings/update-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (err) {
+                showNotification('Network error', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

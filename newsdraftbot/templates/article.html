@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ article.title[:60] }} - NewsDraftBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --newsroom-bg: #f4f5f7;
+            --newsroom-card: #ffffff;
+            --newsroom-border: #e0e3e7;
+            --newsroom-text: #2d3748;
+            --newsroom-muted: #718096;
+            --newsroom-accent: #1a73e8;
+            --newsroom-success: #0c9d58;
+            --newsroom-warning: #f5a623;
+            --newsroom-danger: #d93025;
+        }
+        body { background: var(--newsroom-bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--newsroom-text); }
+        .newsroom-card { background: var(--newsroom-card); border: 1px solid var(--newsroom-border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .newsroom-card .card-header { background: transparent; border-bottom: 1px solid var(--newsroom-border); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--newsroom-muted); padding: 0.75rem 1rem; }
+        .newsroom-card .card-body { padding: 1rem; }
+        .newsroom-input, .newsroom-select { border: 1px solid var(--newsroom-border); border-radius: 6px; font-size: 0.9rem; padding: 0.5rem 0.75rem; }
+        .newsroom-input:focus, .newsroom-select:focus { border-color: var(--newsroom-accent); box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+        .newsroom-btn { border-radius: 6px; font-weight: 500; font-size: 0.85rem; padding: 0.5rem 1rem; transition: all 0.15s ease; }
+        .newsroom-btn-primary { background: var(--newsroom-accent); color: white; border: none; }
+        .newsroom-btn-primary:hover { background: #1557b0; }
+        .newsroom-btn-success { background: var(--newsroom-success); color: white; border: none; }
+        .newsroom-btn-success:hover { background: #0b8043; }
+        .newsroom-btn-warning { background: var(--newsroom-warning); color: white; border: none; }
+        .newsroom-btn-warning:hover { background: #d4941f; }
+        .newsroom-btn-danger { background: var(--newsroom-danger); color: white; border: none; }
+        .newsroom-btn-danger:hover { background: #b3261e; }
+        .newsroom-btn-outline { background: transparent; border: 1px solid var(--newsroom-border); color: var(--newsroom-text); }
+        .newsroom-btn-outline:hover { border-color: var(--newsroom-accent); color: var(--newsroom-accent); }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .status-new { background: #e8f0fe; color: var(--newsroom-accent); }
+        .status-draft { background: #fef7e0; color: #e37400; }
+        .status-scheduled { background: #f3e8fd; color: #7c3aed; }
+        .status-published { background: #e6f4ea; color: var(--newsroom-success); }
+        .status-failed { background: #fce8e6; color: var(--newsroom-danger); }
+        .tag-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #e8f0fe; color: var(--newsroom-accent); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.8rem; }
+        .tag-badge .remove-tag { cursor: pointer; font-size: 0.75rem; opacity: 0.6; }
+        .tag-badge .remove-tag:hover { opacity: 1; }
+        .cat-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #e6f4ea; color: var(--newsroom-success); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.8rem; }
+        .cat-badge .remove-cat { cursor: pointer; font-size: 0.75rem; opacity: 0.6; }
+        .cat-badge .remove-cat:hover { opacity: 1; }
+        .dropdown-search { position: relative; }
+        .dropdown-search input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--newsroom-border); border-radius: 4px; font-size: 0.85rem; }
+        .dropdown-search input:focus { border-color: var(--newsroom-accent); outline: none; }
+        .dropdown-menu-custom { max-height: 200px; overflow-y: auto; border: 1px solid var(--newsroom-border); border-radius: 6px; margin-top: 2px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .dropdown-menu-custom .dropdown-item { font-size: 0.85rem; padding: 0.35rem 0.75rem; cursor: pointer; }
+        .dropdown-menu-custom .dropdown-item:hover { background: #f0f4ff; }
+        .dropdown-menu-custom .dropdown-item.active { background: #e8f0fe; font-weight: 500; }
+        .featured-image-preview { width: 100%; max-height: 250px; object-fit: cover; border-radius: 6px; border: 1px solid var(--newsroom-border); }
+        .publish-bar { position: sticky; bottom: 0; background: var(--newsroom-card); border-top: 1px solid var(--newsroom-border); padding: 0.75rem 1.5rem; z-index: 100; }
+        .publish-bar .btn { min-width: 120px; }
+        .nav-tabs .nav-link { color: var(--newsroom-muted); font-size: 0.85rem; border: none; padding: 0.5rem 1rem; }
+        .nav-tabs .nav-link.active { color: var(--newsroom-accent); border-bottom: 2px solid var(--newsroom-accent); background: transparent; }
+        .tab-pane { padding-top: 1rem; }
+        .section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--newsroom-muted); font-weight: 600; margin-bottom: 0.35rem; }
+        .pill-selector { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .pill-selector .pill { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--newsroom-border); transition: all 0.1s; background: white; }
+        .pill-selector .pill:hover { border-color: var(--newsroom-accent); }
+        .pill-selector .pill.selected { background: var(--newsroom-accent); color: white; border-color: var(--newsroom-accent); }
+        .wp-info { background: #f8f9fa; border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.8rem; color: var(--newsroom-muted); }
+        .wp-info strong { color: var(--newsroom-text); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="background: #1a1d23 !important;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class="bi bi-newspaper"></i> NewsDraftBot</a>
+            <div class="d-flex align-items-center gap-2">
+                {% if config.FB_PAGE_ID %}
+                <span class="badge bg-secondary px-3 py-2" style="font-size:0.75rem;">
+                    <i class="bi bi-facebook me-1"></i> {{ config.FB_PAGE_ID }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-3 px-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size:0.85rem;">
+                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/articles">Articles</a></li>
+                    <li class="breadcrumb-item active">Article #{{ article.id }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-2">
+                <span class="status-badge status-{{ article.status.lower() }}">{{ article.status }}</span>
+                <span class="badge bg-primary px-3 py-2" style="font-size:0.75rem;">
+                    <i class="bi bi-share-fill me-1"></i> Shared <span id="topShareCountValue">{{ article.share_count or 0 }}</span>x
+                    {% if config.FB_PAGE_ID %} to {{ config.FB_PAGE_ID }}{% endif %}
+                </span>
+                {% if article.wordpress_post_id %}
+                <span class="wp-info"><i class="bi bi-wordpress"></i> WP ID: {{ article.wordpress_post_id }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="newsroom-card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-pencil-square me-1"></i> Article Content</span>
+                        <div class="d-flex gap-2">
+                            <button class="newsroom-btn newsroom-btn-outline btn-sm" onclick="toggleAIPanel()">
+                                <i class="bi bi-magic"></i> AI
+                            </button>
+                            {% if article.status == 'PUBLISHED' and article.wordpress_post_id and article.wordpress_url %}
+                            <button class="newsroom-btn newsroom-btn-outline btn-sm" onclick='shareToFacebook({{ article.title | tojson }}, {{ article.wordpress_post_id }}, {{ article.wordpress_url | tojson if article.wordpress_url else "null" }})'>
+                                <i class="bi bi-facebook"></i> Share
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="section-label">Article Title</div>
+                            <input type="text" class="newsroom-input form-control form-control-lg" id="editTitle" value="{{ article.title }}" placeholder="Enter article title...">
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="section-label">Content</div>
+                            <textarea class="form-control" id="editContent" rows="20">{{ article.content or '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="section-label">Excerpt</div>
+                            <textarea class="newsroom-input form-control" id="editExcerpt" rows="3" placeholder="Article excerpt / summary...">{{ article.excerpt or '' }}</textarea>
+                        </div>
+
+                        <div id="aiPanel" style="display:none;" class="mb-3 p-3" style="background:#f8f9fa;border-radius:6px;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="section-label mb-0"><i class="bi bi-magic"></i> AI Assistant</span>
+                                <span id="quotaDisplay" class="badge bg-secondary" style="font-size:0.7rem;"></span>
+                            </div>
+                            <div class="input-group mb-2">
+                                <select class="form-select form-select-sm" id="savedPromptSelect" onchange="loadSavedPrompt()">
+                                    <option value="">-- Load saved prompt --</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-success" type="button" onclick="saveCurrentPrompt()" title="Save prompt">
+                                    <i class="bi bi-bookmark-plus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteSavedPrompt()" title="Delete prompt">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div class="input-group">
+                                <textarea class="form-control form-control-sm" id="aiInstruction" rows="2" placeholder="Custom AI instruction...">{{ article.ai_instruction or '' }}</textarea>
+                                <button class="btn btn-sm btn-primary" type="button" onclick="aiTweak()" title="Rewrite content only">
+                                    <i class="bi bi-send"></i> Run
+                                </button>
+                                <button class="btn btn-sm btn-warning" type="button" onclick="aiEditAll()" title="Edit title, content, tags, categories, reporter">
+                                    <i class="bi bi-pencil-square"></i> Full Edit
+                                </button>
+                            </div>
+                            <div id="aiInstructionStatus" class="mt-1" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="newsroom-card mb-3">
+                    <div class="card-header"><i class="bi bi-send me-1"></i> Publish</div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="newsroom-btn newsroom-btn-primary" onclick="wpSave('draft')">
+                                <i class="bi bi-file-earmark"></i> Save Draft
+                            </button>
+                            <button class="newsroom-btn newsroom-btn-success" onclick="wpSave('publish')">
+                                <i class="bi bi-send"></i> Publish Now
+                            </button>
+                            <button class="newsroom-btn newsroom-btn-warning" onclick="showScheduleModal()">
+                                <i class="bi bi-calendar-plus"></i> Schedule
+                            </button>
+                            {% if article.wordpress_post_id %}
+                            <div class="wp-info mt-2">
+                                <div><strong>WP Post ID:</strong> {{ article.wordpress_post_id }}</div>
+                                {% if article.wordpress_url %}
+                                <div><strong>URL:</strong> <a href="{{ article.wordpress_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width:250px;vertical-align:bottom;">{{ article.wordpress_url }}</a></div>
+                                {% endif %}
+                                <div class="mt-1">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="wpSave('update_draft')">Update Draft</button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="wpSave('update_publish')">Update & Publish</button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="newsroom-card mb-3">
+                    <div class="card-header"><i class="bi bi-person me-1"></i> Author & Reporter</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="section-label">WordPress Author</div>
+                            <select class="newsroom-select form-select form-select-sm" id="editWpAuthor">
+                                <option value="">-- Select Author --</option>
+                            </select>
+                            <small class="text-muted" style="font-size:0.75rem;">Select the WordPress user who will be listed as author</small>
+                        </div>
+                        <div class="mb-0">
+                            <div class="section-label">Custom Reporter Name</div>
+                            <div class="input-group input-group-sm mb-1">
+                                <select class="form-select" id="reporterDropdown" onchange="selectReporter(this.value)">
+                                    <option value="">-- Select saved reporter --</option>
+                                    {% for r in reporters %}
+                                    <option value="{{ r.name }}" {% if article.reporter == r.name %}selected{% endif %}>{{ r.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button class="btn btn-outline-primary" type="button" onclick="saveReporter()" title="Save current name as new reporter">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <input type="text" class="newsroom-input form-control form-control-sm" id="editReporter" value="{{ article.reporter or config.REPORTER_NAME or '' }}" placeholder="Type reporter name or select from dropdown" oninput="syncReporterDropdown(this.value)">
+                            <small class="text-muted" style="font-size:0.75rem;">
+                                <span id="acfStatus"><i class="bi bi-arrow-repeat"></i> Checking...</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="newsroom-card mb-3">
+                    <div class="card-header"><i class="bi bi-folder me-1"></i> Categories</div>
+                    <div class="card-body">
+                        <div class="dropdown-search mb-2">
+                            <input type="text" class="form-control form-control-sm" id="categorySearch" placeholder="Search categories..." oninput="filterCategories(this.value)">
+                        </div>
+                        <div id="categoryListLoading" class="text-muted small"><i class="bi bi-arrow-repeat"></i> Loading categories...</div>
+                        <div id="categoryList" class="pill-selector" style="max-height:150px;overflow-y:auto;display:none;"></div>
+                        <div class="mt-2 d-flex gap-1">
+                            <input type="text" class="form-control form-control-sm" id="newCategoryName" placeholder="New category name...">
+                            <button class="btn btn-sm btn-outline-primary" onclick="createAndSelectCategory()" title="Create and select">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div id="selectedCategories" class="d-flex flex-wrap gap-1 mt-2"></div>
+                    </div>
+                </div>
+
+                <div class="newsroom-card mb-3">
+                    <div class="card-header"><i class="bi bi-tags me-1"></i> Tags</div>
+                    <div class="card-body">
+                        <div class="dropdown-search mb-2">
+                            <input type="text" class="form-control form-control-sm" id="tagSearch" placeholder="Search tags..." oninput="filterTags(this.value)">
+                        </div>
+                        <div id="tagListLoading" class="text-muted small"><i class="bi bi-arrow-repeat"></i> Loading tags...</div>
+                        <div id="tagList" class="pill-selector" style="max-height:120px;overflow-y:auto;display:none;"></div>
+                        <div class="mt-2 d-flex gap-1">
+                            <input type="text" class="form-control form-control-sm" id="newTagName" placeholder="New tag name...">
+                            <button class="btn btn-sm btn-outline-primary" onclick="createAndSelectTag()" title="Create and select">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div id="selectedTags" class="d-flex flex-wrap gap-1 mt-2"></div>
+                    </div>
+                </div>
+
+                <div class="newsroom-card mb-3">
+                    <div class="card-header"><i class="bi bi-image me-1"></i> Featured Image</div>
+                    <div class="card-body">
+                        <div id="featuredImagePreview">
+                            {% if article.featured_image %}
+                            <div class="position-relative mb-2">
+                                <img src="{{ article.featured_image }}" class="featured-image-preview" id="featuredImg" alt="Featured">
+                                <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="clearFeaturedImage()" title="Remove">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            {% else %}
+                            <div class="text-center p-3" style="background:#f8f9fa;border-radius:6px;border:2px dashed var(--newsroom-border);">
+                                <i class="bi bi-image" style="font-size:2rem;color:var(--newsroom-muted);"></i>
+                                <p class="text-muted small mb-2">No featured image set</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-grid gap-1">
+                            <label class="newsroom-btn newsroom-btn-outline btn-sm text-center" style="cursor:pointer;">
+                                <i class="bi bi-upload"></i> Upload Image
+                                <input type="file" id="featuredImageInput" accept="image/*" style="display:none;" onchange="uploadFeaturedImage(this)">
+                            </label>
+                            <div id="uploadProgress" class="small text-muted" style="display:none;"><i class="bi bi-arrow-repeat"></i> Uploading...</div>
+                        </div>
+                        {% if article.images and article.images|length > 1 %}
+                        <div class="mt-2">
+                            <small class="text-muted">Article images:</small>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% for img in article.images %}
+                                <img src="{{ img }}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid {% if img == article.featured_image %}var(--newsroom-accent){% else %}transparent{% endif %};" onclick="setFeaturedFromUrl('{{ img }}')">
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 mt-2">
+                    <button class="newsroom-btn newsroom-btn-danger btn-sm" onclick="deleteArticle({{ article.id }})">
+                        <i class="bi bi-trash"></i> Delete Article
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="scheduleModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title">Schedule Publication</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small">Date & Time</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="scheduleDatetime">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="confirmSchedule()">Schedule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="bi bi-info-circle me-2" id="toastIcon"></i>
+                <strong class="me-auto" id="toastTitle">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
+    <script>
+        let selectedCategories = new Set({{ article.categories | tojson | safe if article.categories else '[]' }});
+        let selectedTags = new Set({{ article.tags | tojson | safe if article.tags else '[]' }});
+        let wpPostId = {{ article.wordpress_post_id | tojson }};
+        let featuredMediaId = {{ article.wordpress_featured_media_id | tojson }};
+        let wpAuthorId = {{ article.wordpress_author_id | tojson }};
+        const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
+
+        function showNotification(message, type) {
+            const el = document.getElementById('notificationToast');
+            const icon = document.getElementById('toastIcon');
+            const title = document.getElementById('toastTitle');
+            el.className = 'toast';
+            if (type === 'success') { el.classList.add('bg-success', 'text-white'); icon.className = 'bi bi-check-circle me-2'; title.textContent = 'Success'; }
+            else if (type === 'error') { el.classList.add('bg-danger', 'text-white'); icon.className = 'bi bi-exclamation-circle me-2'; title.textContent = 'Error'; }
+            else { icon.className = 'bi bi-info-circle me-2'; title.textContent = 'Info'; }
+            document.getElementById('toastMessage').textContent = message;
+            toast.show();
+        }
+
+        function getContent() {
+            if (tinymce.get('editContent')) return tinymce.get('editContent').getContent();
+            return document.getElementById('editContent').value;
+        }
+
+        function setContent(html) {
+            if (tinymce.get('editContent')) tinymce.get('editContent').setContent(html);
+            else document.getElementById('editContent').value = html;
+        }
+
+        function getFormData() {
+            return {
+                title: document.getElementById('editTitle').value.trim(),
+                content: getContent(),
+                excerpt: document.getElementById('editExcerpt').value.trim(),
+                reporter: document.getElementById('editReporter').value.trim(),
+                wordpress_author_id: document.getElementById('editWpAuthor').value ? parseInt(document.getElementById('editWpAuthor').value) : null,
+                tags: Array.from(selectedTags),
+                categories: Array.from(selectedCategories),
+                featured_media_id: featuredMediaId,
+            };
+        }
+
+        function selectReporter(name) {
+            if (name) {
+                document.getElementById('editReporter').value = name;
+            }
+        }
+
+        function syncReporterDropdown(value) {
+            const sel = document.getElementById('reporterDropdown');
+            const matched = Array.from(sel.options).some(opt => opt.value === value);
+            if (matched) {
+                sel.value = value;
+            } else {
+                sel.value = '';
+            }
+        }
+
+        async function saveReporter() {
+            const name = document.getElementById('editReporter').value.trim();
+            if (!name) { showNotification('Enter a reporter name first', 'error'); return; }
+            try {
+                const resp = await fetch('/api/reporters', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                });
+                const data = await resp.json();
+                if (data.success || data.reporter) {
+                    const r = data.reporter || data;
+                    const sel = document.getElementById('reporterDropdown');
+                    const exists = Array.from(sel.options).some(opt => opt.value === r.name);
+                    if (!exists) {
+                        const opt = document.createElement('option');
+                        opt.value = r.name;
+                        opt.textContent = r.name;
+                        sel.appendChild(opt);
+                    }
+                    sel.value = r.name;
+                    showNotification('Reporter saved', 'success');
+                } else {
+                    showNotification(data.message || 'Failed to save reporter', 'error');
+                }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function wpSave(action) {
+            const data = getFormData();
+            data.action = action;
+            if (!data.title) { showNotification('Title is required', 'error'); return; }
+
+            try {
+                const resp = await fetch(`/articles/{{ article.id }}/wp-publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    wpPostId = result.wordpress_post_id;
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (err) {
+                showNotification('Network error', 'error');
+            }
+        }
+
+        let scheduleArticleId = {{ article.id }};
+        function showScheduleModal() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('scheduleDatetime').min = now.toISOString().slice(0, 16);
+            document.getElementById('scheduleDatetime').value = now.toISOString().slice(0, 16);
+            new bootstrap.Modal(document.getElementById('scheduleModal')).show();
+        }
+
+        async function confirmSchedule() {
+            const dt = document.getElementById('scheduleDatetime').value;
+            if (!dt) { showNotification('Please select a date/time', 'error'); return; }
+            const data = getFormData();
+            data.action = wpPostId ? 'update_schedule' : 'schedule';
+            data.schedule_date = new Date(dt).toISOString();
+            if (!data.title) { showNotification('Title is required', 'error'); return; }
+            try {
+                const resp = await fetch(`/articles/{{ article.id }}/wp-publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showNotification('Article scheduled!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('scheduleModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        function toggleCategory(el) {
+            const name = el.dataset.name;
+            if (selectedCategories.has(name)) {
+                selectedCategories.delete(name);
+                el.classList.remove('selected');
+            } else {
+                selectedCategories.add(name);
+                el.classList.add('selected');
+            }
+            renderSelectedCategories();
+        }
+
+        function toggleTag(el) {
+            const name = el.dataset.name;
+            if (selectedTags.has(name)) {
+                selectedTags.delete(name);
+                el.classList.remove('selected');
+            } else {
+                selectedTags.add(name);
+                el.classList.add('selected');
+            }
+            renderSelectedTags();
+        }
+
+        function filterCategories(query) {
+            document.querySelectorAll('#categoryList .pill').forEach(pill => {
+                const match = pill.dataset.name.toLowerCase().includes(query.toLowerCase());
+                pill.style.display = match ? '' : 'none';
+            });
+        }
+
+        function filterTags(query) {
+            document.querySelectorAll('#tagList .pill').forEach(pill => {
+                const match = pill.dataset.name.toLowerCase().includes(query.toLowerCase());
+                pill.style.display = match ? '' : 'none';
+            });
+        }
+
+        function renderSelectedCategories() {
+            const container = document.getElementById('selectedCategories');
+            container.innerHTML = '';
+            selectedCategories.forEach(name => {
+                const span = document.createElement('span');
+                span.className = 'cat-badge';
+                span.innerHTML = `${name} <span class="remove-cat" onclick="removeSelectedCategory('${name}')">&times;</span>`;
+                container.appendChild(span);
+            });
+        }
+
+        function renderSelectedTags() {
+            const container = document.getElementById('selectedTags');
+            container.innerHTML = '';
+            selectedTags.forEach(name => {
+                const span = document.createElement('span');
+                span.className = 'tag-badge';
+                span.innerHTML = `${name} <span class="remove-tag" onclick="removeSelectedTag('${name}')">&times;</span>`;
+                container.appendChild(span);
+            });
+        }
+
+        function removeSelectedCategory(name) {
+            selectedCategories.delete(name);
+            document.querySelectorAll('#categoryList .pill').forEach(p => {
+                if (p.dataset.name === name) p.classList.remove('selected');
+            });
+            renderSelectedCategories();
+        }
+
+        function removeSelectedTag(name) {
+            selectedTags.delete(name);
+            document.querySelectorAll('#tagList .pill').forEach(p => {
+                if (p.dataset.name === name) p.classList.remove('selected');
+            });
+            renderSelectedTags();
+        }
+
+        async function createAndSelectCategory() {
+            const input = document.getElementById('newCategoryName');
+            const name = input.value.trim();
+            if (!name) { showNotification('Enter a category name', 'error'); return; }
+            try {
+                const resp = await fetch('/api/wp/categories/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    selectedCategories.add(name);
+                    renderSelectedCategories();
+                    const list = document.getElementById('categoryList');
+                    const pill = document.createElement('span');
+                    pill.className = 'pill selected';
+                    pill.dataset.name = name;
+                    pill.textContent = name;
+                    pill.onclick = () => toggleCategory(pill);
+                    list.appendChild(pill);
+                    input.value = '';
+                    showNotification('Category created and selected', 'success');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function createAndSelectTag() {
+            const input = document.getElementById('newTagName');
+            const name = input.value.trim();
+            if (!name) { showNotification('Enter a tag name', 'error'); return; }
+            try {
+                const resp = await fetch('/api/wp/tags/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    selectedTags.add(name);
+                    renderSelectedTags();
+                    const list = document.getElementById('tagList');
+                    const pill = document.createElement('span');
+                    pill.className = 'pill selected';
+                    pill.dataset.name = name;
+                    pill.textContent = name;
+                    pill.onclick = () => toggleTag(pill);
+                    list.appendChild(pill);
+                    input.value = '';
+                    showNotification('Tag created and selected', 'success');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function uploadFeaturedImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const progress = document.getElementById('uploadProgress');
+            progress.style.display = 'block';
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const resp = await fetch('/api/wp/media/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    featuredMediaId = data.media.id;
+                    const preview = document.getElementById('featuredImagePreview');
+                    preview.innerHTML = `<div class="position-relative mb-2">
+                        <img src="${data.media.url}" class="featured-image-preview" alt="Featured">
+                        <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="clearFeaturedImage()" title="Remove"><i class="bi bi-x"></i></button>
+                    </div>`;
+                    showNotification('Featured image uploaded!', 'success');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (err) {
+                showNotification('Upload failed', 'error');
+            } finally {
+                progress.style.display = 'none';
+                input.value = '';
+            }
+        }
+
+        function clearFeaturedImage() {
+            featuredMediaId = null;
+            document.getElementById('featuredImagePreview').innerHTML = `<div class="text-center p-3" style="background:#f8f9fa;border-radius:6px;border:2px dashed var(--newsroom-border);">
+                <i class="bi bi-image" style="font-size:2rem;color:var(--newsroom-muted);"></i>
+                <p class="text-muted small mb-2">No featured image set</p>
+            </div>`;
+        }
+
+        function setFeaturedFromUrl(url) {
+            fetch(`/articles/{{ article.id }}/set-featured-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_url: url }),
+            }).then(r => r.json()).then(d => {
+                if (d.success) { showNotification('Featured image updated', 'success'); setTimeout(() => location.reload(), 500); }
+            });
+        }
+
+        async function aiTweak() {
+            const btn = document.querySelector('button[onclick="aiTweak()"]');
+            const instruction = document.getElementById('aiInstruction').value.trim();
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running...';
+            try {
+                const resp = await fetch(`/articles/{{ article.id }}/ai-tweak`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instruction }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    setContent(data.content);
+                    if (data.remaining !== undefined) {
+                        document.getElementById('quotaDisplay').textContent = `Quota: ${data.remaining}/1500`;
+                    }
+                    showNotification('AI completed', 'success');
+                } else {
+                    showNotification(data.message || 'AI failed', 'error');
+                }
+            } catch (err) {
+                showNotification('Network error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send"></i> Run';
+            }
+        }
+
+        async function aiEditAll() {
+            const btn = document.querySelector('button[onclick="aiEditAll()"]');
+            const instruction = document.getElementById('aiInstruction').value.trim();
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running...';
+            try {
+                const resp = await fetch(`/articles/{{ article.id }}/ai-edit-all`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instruction }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('editTitle').value = data.title;
+                    setContent(data.content);
+                    document.getElementById('editExcerpt').value = data.excerpt;
+
+                    if (data.tags) {
+                        selectedTags = new Set(data.tags);
+                        renderSelectedTags();
+                        updateTagPills();
+                    }
+                    if (data.categories) {
+                        selectedCategories = new Set(data.categories);
+                        renderSelectedCategories();
+                        updateCategoryPills();
+                    }
+                    if (data.reporter) {
+                        document.getElementById('editReporter').value = data.reporter;
+                        syncReporterDropdown(data.reporter);
+                    }
+
+                    if (data.remaining !== undefined) {
+                        document.getElementById('quotaDisplay').textContent = `Quota: ${data.remaining}/1500`;
+                    }
+                    showNotification('AI full edit applied — review then save', 'success');
+                } else {
+                    showNotification(data.message || 'AI failed', 'error');
+                }
+            } catch (err) {
+                showNotification('Network error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-pencil-square"></i> Full Edit';
+            }
+        }
+
+        function updateTagPills() {
+            document.querySelectorAll('#tagList .pill').forEach(pill => {
+                if (selectedTags.has(pill.dataset.name)) {
+                    pill.classList.add('selected');
+                } else {
+                    pill.classList.remove('selected');
+                }
+            });
+        }
+
+        function updateCategoryPills() {
+            document.querySelectorAll('#categoryList .pill').forEach(pill => {
+                if (selectedCategories.has(pill.dataset.name)) {
+                    pill.classList.add('selected');
+                } else {
+                    pill.classList.remove('selected');
+                }
+            });
+        }
+
+        function toggleAIPanel() {
+            const panel = document.getElementById('aiPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') {
+                loadSavedPrompts();
+                loadQuota();
+            }
+        }
+
+        async function loadSavedPrompts() {
+            try {
+                const resp = await fetch('/api/saved-prompts');
+                const prompts = await resp.json();
+                const sel = document.getElementById('savedPromptSelect');
+                sel.innerHTML = '<option value="">-- Load saved prompt --</option>';
+                prompts.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    sel.appendChild(opt);
+                });
+            } catch (err) {}
+        }
+
+        function loadSavedPrompt() {
+            const sel = document.getElementById('savedPromptSelect');
+            const id = sel.value;
+            if (!id) return;
+            fetch('/api/saved-prompts').then(r => r.json()).then(prompts => {
+                const p = prompts.find(x => x.id == id);
+                if (p) document.getElementById('aiInstruction').value = p.prompt_text;
+            });
+        }
+
+        async function saveCurrentPrompt() {
+            const name = prompt('Name this prompt:');
+            if (!name || !name.trim()) return;
+            const text = document.getElementById('aiInstruction').value.trim();
+            if (!text) { showNotification('Instruction is empty', 'error'); return; }
+            try {
+                const resp = await fetch('/api/saved-prompts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), prompt_text: text }),
+                });
+                const data = await resp.json();
+                if (data.success) { showNotification('Prompt saved', 'success'); loadSavedPrompts(); }
+                else { showNotification(data.message, 'error'); }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function deleteSavedPrompt() {
+            const sel = document.getElementById('savedPromptSelect');
+            const id = sel.value;
+            if (!id) { showNotification('Select a prompt first', 'error'); return; }
+            if (!confirm('Delete this saved prompt?')) return;
+            try {
+                const resp = await fetch(`/api/saved-prompts/${id}`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.success) { showNotification('Prompt deleted', 'success'); loadSavedPrompts(); }
+                else { showNotification(data.message, 'error'); }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function loadQuota() {
+            try {
+                const resp = await fetch('/api/ai-quota');
+                const data = await resp.json();
+                document.getElementById('quotaDisplay').textContent = `Quota: ${data.remaining}/${data.limit}`;
+            } catch (err) {}
+        }
+
+        async function deleteArticle(id) {
+            if (!confirm('Delete this article permanently?')) return;
+            try {
+                const resp = await fetch(`/articles/${id}/delete`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) { showNotification('Article deleted', 'success'); setTimeout(() => window.location.href = '/articles', 1500); }
+                else { showNotification(data.message, 'error'); }
+            } catch (err) { showNotification('Network error', 'error'); }
+        }
+
+        async function shareToFacebook(title, wpPostId, wpUrlFromDb) {
+            const wpUrl = wpUrlFromDb || `{{ config.WORDPRESS_URL }}/?p=${wpPostId}`;
+            const w = 600, h = 650, left = (window.innerWidth - w) / 2, top = (window.innerHeight - h) / 2;
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(wpUrl)}`, 'fbShareWindow', `width=${w},height=${h},top=${top},left=${left},toolbar=0,location=0,menubar=0,directories=0,scrollbars=0`);
+            try {
+                const resp = await fetch(`/articles/{{ article.id }}/increment-share`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('topShareCountValue').textContent = data.share_count;
+                }
+            } catch (err) { console.error('Share count update failed:', err); }
+        }
+
+        async function loadWpCategories() {
+            const loading = document.getElementById('categoryListLoading');
+            const list = document.getElementById('categoryList');
+            try {
+                const resp = await fetch('/api/categories');
+                const data = await resp.json();
+                if (data.categories && data.categories.length) {
+                    list.innerHTML = '';
+                    data.categories.forEach(cat => {
+                        const pill = document.createElement('span');
+                        pill.className = 'pill' + (selectedCategories.has(cat.name) ? ' selected' : '');
+                        pill.dataset.name = cat.name;
+                        pill.textContent = cat.name;
+                        pill.onclick = () => toggleCategory(pill);
+                        list.appendChild(pill);
+                    });
+                    loading.style.display = 'none';
+                    list.style.display = '';
+                } else {
+                    loading.innerHTML = '<span class="text-danger">Failed to load categories</span>';
+                }
+            } catch (err) {
+                loading.innerHTML = '<span class="text-danger">Could not load categories</span>';
+            }
+        }
+
+        async function loadWpTags() {
+            const loading = document.getElementById('tagListLoading');
+            const list = document.getElementById('tagList');
+            try {
+                const resp = await fetch('/api/wp/tags');
+                const data = await resp.json();
+                if (data.tags && data.tags.length) {
+                    list.innerHTML = '';
+                    data.tags.forEach(t => {
+                        const pill = document.createElement('span');
+                        pill.className = 'pill' + (selectedTags.has(t.name) ? ' selected' : '');
+                        pill.dataset.name = t.name;
+                        pill.textContent = t.name;
+                        pill.onclick = () => toggleTag(pill);
+                        list.appendChild(pill);
+                    });
+                    loading.style.display = 'none';
+                    list.style.display = '';
+                } else {
+                    loading.innerHTML = '<span class="text-warning">Tags unavailable from WordPress. You can still create tags manually below.</span>';
+                }
+            } catch (err) {
+                loading.innerHTML = '<span class="text-warning">Tags unavailable from WordPress. You can still create tags manually below.</span>';
+            }
+        }
+
+        async function loadAcfStatus() {
+            const el = document.getElementById('acfStatus');
+            try {
+                const resp = await fetch('/api/wp/acf-status');
+                const data = await resp.json();
+                if (data.acf_available) {
+                    el.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> ACF detected - sent via ACF field';
+                } else {
+                    el.innerHTML = '<i class="bi bi-info-circle"></i> Sent as post meta';
+                }
+            } catch (err) {
+                el.innerHTML = '<i class="bi bi-info-circle"></i> Sent as post meta';
+            }
+        }
+
+        async function loadWpAuthors() {
+            const sel = document.getElementById('editWpAuthor');
+            try {
+                const resp = await fetch('/api/wp/authors');
+                const data = await resp.json();
+                if (data.authors) {
+                    sel.innerHTML = '<option value="">-- Select Author --</option>';
+                    data.authors.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = `${a.name} (${a.slug})`;
+                        if (wpAuthorId && a.id === wpAuthorId) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (err) {}
+        }
+
+        renderSelectedCategories();
+        renderSelectedTags();
+        loadWpAuthors();
+        loadWpCategories();
+        loadWpTags();
+        loadAcfStatus();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            tinymce.init({
+                selector: '#editContent',
+                license_key: 'gpl',
+                height: 500,
+                menubar: true,
+                plugins: 'lists link code image table hr media',
+                toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | code | removeformat',
+                content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.6; color: #2d3748; }',
+            });
+        });
+    </script>
+</body>
+</html>
