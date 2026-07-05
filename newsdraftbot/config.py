@@ -20,10 +20,9 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 5,
-        "pool_recycle": 300,
         "pool_pre_ping": True,
-    }
+        "pool_recycle": 300,
+    } if DATABASE_URL else {}
     MAX_IMAGE_WIDTH = 1920
     WATERMARK_POSITION = os.getenv("WATERMARK_POSITION", "bottom_right")
     LOGO_WIDTH = int(os.getenv("LOGO_WIDTH", "300"))
