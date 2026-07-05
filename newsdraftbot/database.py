@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import JSON
@@ -71,6 +72,9 @@ class Article(db.Model):
 
 
 def init_db(app):
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), "database"), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp"), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads"), exist_ok=True)
     db.init_app(app)
     with app.app_context():
         db.create_all()
