@@ -12,9 +12,18 @@ class Config:
     CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "30"))
     LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "logos", "logo.png")
     SECRET_KEY = os.getenv("SECRET_KEY", "newsdraftbot-secret-key-change-in-production")
-    DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "news.db")
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
+    if DATABASE_URL:
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "news.db")
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 5,
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
     MAX_IMAGE_WIDTH = 1920
     WATERMARK_POSITION = os.getenv("WATERMARK_POSITION", "bottom_right")
     LOGO_WIDTH = int(os.getenv("LOGO_WIDTH", "300"))
