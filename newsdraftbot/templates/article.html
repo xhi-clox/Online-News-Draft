@@ -853,6 +853,7 @@
         }
 
         async function shareToFacebook(title, wpPostId, wpUrlFromDb) {
+            try { await navigator.clipboard.writeText(title); } catch (e) {}
             const wpUrl = wpUrlFromDb || `{{ config.WORDPRESS_URL }}/?p=${wpPostId}`;
             const w = 600, h = 650, left = (window.innerWidth - w) / 2, top = (window.innerHeight - h) / 2;
             window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(wpUrl)}`, 'fbShareWindow', `width=${w},height=${h},top=${top},left=${left},toolbar=0,location=0,menubar=0,directories=0,scrollbars=0`);

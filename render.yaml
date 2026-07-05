@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: news-draft-bot
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r newsdraftbot/requirements.txt
+    startCommand: cd newsdraftbot && gunicorn wsgi:app --workers=1 --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WORDPRESS_URL
+        sync: false
+      - key: WORDPRESS_USERNAME
+        sync: false
+      - key: WORDPRESS_APP_PASSWORD
+        sync: false
+      - key: NEWS_SOURCE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: FB_PAGE_ID
+        sync: false
+      - key: FB_PAGE_ACCESS_TOKEN
+        sync: false

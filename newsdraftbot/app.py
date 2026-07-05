@@ -1272,8 +1272,9 @@ def main():
     from scheduler import init_scheduler, scheduler
     init_scheduler(app)
 
+    port = int(os.environ.get("PORT", 5000))
     try:
-        app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
     finally:
         scheduler.shutdown(wait=False)
 

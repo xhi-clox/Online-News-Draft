@@ -5,5 +5,6 @@ newsdraftbot/credentials.json
 newsdraftbot/.env
 *.pyc
 __pycache__/
-newsdraftbot/static/uploads/*.jpg
+newsdraftbot/static/uploads/
+newsdraftbot/temp/
 *.db
